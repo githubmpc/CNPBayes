@@ -185,7 +185,7 @@ Rcpp::IntegerVector update_mendelian(Rcpp::S4 xmod) {
   double numer;
   double denom;
   NumericMatrix ptrio = update_trioPr(model) ;
-  NumericVector p = model.slot("pi_parents") ;
+  NumericVector p = model.slot("pi") ;
   int T=zo.size() ;
   IntegerVector mendel(T);
   double prob_mendel ;
@@ -634,6 +634,69 @@ Rcpp::IntegerVector update_zchild(Rcpp::S4 xmod) {
   }
   return ztrio;
 }
+
+
+// [[Rcpp::export]]
+Rcpp::NumericMatrix update_multinomialPrFam(Rcpp::S4 xmod) {
+  RNGScope scope ;
+  Rcpp::S4 model(clone(xmod)) ;
+  Rcpp::S4 hypp(model.slot("hyperparams")) ;
+  int K = getK(hypp) ;
+  IntegerVector batch = model.slot("batch") ;
+  IntegerVector ub = unique_batch(batch) ;
+  // Mendelian transmission probability matrix
+  NumericMatrix ptrio = update_trioPr2(xmod) ;
+  NumericVector p = model.slot("pi") ;
+  // commented by RS: pp is not unused
+  //NumericVector pp = model.slot("pi_parents") ;
+  NumericMatrix sigma2 = model.slot("sigma2") ;
+  NumericMatrix theta = model.slot("theta") ;
+  int B = sigma2.nrow() ;
+  NumericVector x = model.slot("data") ;
+  IntegerVector nb = model.slot("batchElements") ;
+  double df = getDf(hypp) ;
+  CharacterVector fam = family_member(xmod);
+  Rcpp::LogicalVector child_ind(fam.size());
+  // TODO:
+  double p_mendel=0.9;
+  // TODO: we do this with each MCMC iteration
+  for (int i = 0; i < fam.size(); i++){
+    child_ind[i] = (fam[i] == "o");
+  }
+  Rcpp::NumericVector xo = x[child_ind];
+  // Mendelian observations
+  int M = xo.size() ;
+  NumericMatrix lik(M, K) ;
+  NumericVector this_batch(M) ;
+  NumericVector tmp(M) ;
+  NumericVector tmp2(M) ;
+  NumericVector rowtotal(M) ;
+  // MC:  why do we multiply ptrio by p[k]?
+  for(int k = 0; k < K; ++k){
+    NumericVector dens(M) ;
+    for(int b = 0; b < B; ++b){
+      this_batch = batch == ub[b] ;
+      //tmp = p[k] * ptrio(_,k) *
+      //      dlocScale_t(xo, df, theta(b, k), sigma) * this_batch ;
+      double sigma = sqrt(sigma2(b, k));
+      NumericVector phi=dlocScale_t(xo, df, theta(b, k), sigma);
+      tmp = ptrio(_, k) * phi * this_batch ;
+      //tmp = ptrio(_, k) * phi * this_batch * (1 - p_mendel) ;
+      //tmp2 = p[k] * phi * this_batch * p_mendel ;
+      //tmp = tmp + tmp2 ;
+      dens += tmp ;
+    }
+    lik(_, k) = dens;
+    rowtotal += dens ;
+  }
+  NumericMatrix PC(M, K) ;
+  for(int k=0; k < K; ++k){
+    PC(_, k) = lik(_, k)/rowtotal ;
+  }
+  return PC;
+}
+
+
 
 // [[Rcpp::export]]
 Rcpp::NumericVector update_mu2(Rcpp::S4 xmod){

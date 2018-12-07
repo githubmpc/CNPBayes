@@ -89,6 +89,11 @@
   mprob2 <- mprob[, -index]
   father <- mprob[, "father"]
   mother <- mprob[, "mother"]
+  gdf <- length(maplabel)
+  genotype.df <- data.frame(permutations(gdf,gdf,c(maplabel), repeats.allowed=T))
+  colnames(genotype.df) <- c("cn.mot","cn.fat","cn.off")
+  mprob.unlist <- mprob2[,c(1:3)]
+  trio.prob <- c(t(mprob.unlist))
   is_mendel <- rep(1L, T)
   ##zamp <- sample(seq_len(K), N, replace=TRUE)
   ##is_offspring <- model@triodata$family_member=="o"
@@ -110,7 +115,9 @@
              batch=batches,
              triodata=triodata,
              mprob=mprob2,
+             transmission_probs=trio.prob,
              maplabel=maplabel,
+             genotypes.tbl=genotype.df,
              u=u,
              predictive=numeric(K*B),
              zstar=integer(K*B),
@@ -220,9 +227,11 @@ combine_batchTrios <- function(model.list, batches){
   mp <- mcmcParams(model.list[[1]])
   triodata <- model.list[[1]]@triodata
   mprob <- model.list[[1]]@mprob
+  transmission_probs <- model.list[[1]]@transmission_probs
   father <- model.list[[1]]@father
   mother <- model.list[[1]]@mother
   maplabel <- model.list[[1]]@maplabel
+  genotypes.tbl <- model.list[[1]]@genotypes.tbl
   iter(mp) <- nrow(th)
   B <- length(unique(batches))
   K <- k(model.list[[1]])
@@ -261,9 +270,11 @@ combine_batchTrios <- function(model.list, batches){
   model <- new(class(model.list[[1]]),
                triodata=triodata,
                mprob=mprob,
+               transmission_probs=transmission_probs,
                father=father,
                mother=mother,
                maplabel=maplabel,
+               genotypes.tbl=genotypes.tbl,
                k=k(hp),
                hyperparams=hp,
                theta=pm.th,
