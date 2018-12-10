@@ -16,6 +16,7 @@
              pi_parents=numeric(K),
              #data=numeric(K),
              triodata=as_tibble(0),
+             triodata2=as_tibble(0),
              mprob=matrix(NA, 0, 0),
              #maplabel=numeric(K),
              predictive=numeric(K*B),
@@ -52,6 +53,7 @@
   ## its a little harder to sort component labels
   log_ratio <- triodata$log_ratio
   batches <- triodata$batches
+  triodata2 <- trio_tbl(triodata)
   triodata <- select(triodata, -c(log_ratio, batches))
   ub <- unique(batches)
   nbatch <- setNames(as.integer(table(batches)), ub)
@@ -90,9 +92,9 @@
   father <- mprob[, "father"]
   mother <- mprob[, "mother"]
   gdf <- length(maplabel)
-  genotype.df <- data.frame(permutations(gdf,gdf,c(maplabel), repeats.allowed=T))
+  genotype.df <- data.frame(permutations(gdf,3,c(maplabel), repeats.allowed=T))
   colnames(genotype.df) <- c("cn.mot","cn.fat","cn.off")
-  mprob.unlist <- mprob2[,c(1:3)]
+  mprob.unlist <- mprob2[,c(1:K)]
   trio.prob <- c(t(mprob.unlist))
   is_mendel <- rep(1L, T)
   ##zamp <- sample(seq_len(K), N, replace=TRUE)
@@ -114,6 +116,7 @@
              data=log_ratio,
              batch=batches,
              triodata=triodata,
+             triodata2=triodata2,
              mprob=mprob2,
              transmission_probs=trio.prob,
              maplabel=maplabel,
@@ -226,6 +229,7 @@ combine_batchTrios <- function(model.list, batches){
   hp <- hyperParams(model.list[[1]])
   mp <- mcmcParams(model.list[[1]])
   triodata <- model.list[[1]]@triodata
+  triodata2 <- model.list[[1]]@triodata2
   mprob <- model.list[[1]]@mprob
   transmission_probs <- model.list[[1]]@transmission_probs
   father <- model.list[[1]]@father
@@ -269,6 +273,7 @@ combine_batchTrios <- function(model.list, batches){
   nbatch <- as.integer(table(batch(model.list[[1]])))
   model <- new(class(model.list[[1]]),
                triodata=triodata,
+               triodata2=triodata2,
                mprob=mprob,
                transmission_probs=transmission_probs,
                father=father,
@@ -358,9 +363,6 @@ TrioBatchModel <- function(triodata=tibble(),
 
 #' @export
 TBM <- TrioBatchModel
-
-
-
 
 theta.fix <- function(model, values) {
   # values is in the form of a [1,K] matrix
@@ -828,6 +830,20 @@ component_stats <- function(tbl){
   tbl
 }
 
+# use tbl output from .simulate_data_multi2
+trio_tbl <- function(simdata.tbl){
+  dat1 <- simdata.tbl %>% select(id, family_member, log_ratio) %>%
+    spread(family_member, log_ratio) 
+  colnames(dat1) <- c("id","lrrm","lrrf","lrro")
+  
+  dat2 <- simdata.tbl %>% select(id, family_member, copy_number) %>%
+    spread(family_member, copy_number)
+  colnames(dat2) <- c("id","cm","cf","co")
+  
+  dat3 <- left_join(dat1, dat2, by=c("id"))
+  dat3
+}
+
 # this function ensures the simulation generates the requisite number of components regardless of MAF parameter (p)
 simulate_data_multi2 <- function(params, N, batches,
                                  error=0, mendelian.probs,
@@ -840,6 +856,7 @@ simulate_data_multi2 <- function(params, N, batches,
     batches <- as.integer(factor(batches))
   }
   batches <- sort(batches)
+  trio.tbl <- trio_tbl(tbl)
   tbl2 <- cbind(tbl, batches)
   tbl3 <- as_tibble(tbl2)
   ##
@@ -849,6 +866,7 @@ simulate_data_multi2 <- function(params, N, batches,
   while(nrow(stats)!=length(maplabel)){
     tbl <- .simulate_data_multi2(params, N, mendelian.probs, maplabel)
     batches <- sort(batches)
+    trio.tbl <- trio_tbl(tbl)
     tbl2 <- cbind(tbl, batches)
     tbl3 <- as_tibble(tbl2)
     stats <- component_stats(tbl3)
@@ -862,8 +880,58 @@ simulate_data_multi2 <- function(params, N, batches,
   komponent <- frank(tbl$copy_number, ties.method=c("dense"))
   loglik <- sum(dnorm(tbl$log_ratio, params$theta[komponent],
                       sqrt(params$sigma2[komponent]), log=TRUE))
-  truth <- list(data=tbl3, params=params, loglik=loglik)
+  truth <- list(data=tbl3, trio_data=trio.tbl, params=params, loglik=loglik)
   truth
+}
+
+jointProb_calc <- function(data.sum, model){
+  
+  mot.ind <- match(model@genotypes.tbl$cn.mot, maplabel)
+  fat.ind <- match(model@genotypes.tbl$cn.fat, maplabel)
+  off.ind <- match(model@genotypes.tbl$cn.off, maplabel)
+  
+  mot.dens <- dnorm(data.sum$lrrm, mean=model@theta[mot.ind], sd=(model@sigma2[mot.ind])^0.5)
+  fat.dens <- dnorm(data.sum$lrrf, mean=model@theta[fat.ind], sd=(model@sigma2[fat.ind])^0.5)
+  off.dens <- dnorm(data.sum$lrro, mean=model@theta[off.ind], sd=(model@sigma2[off.ind])^0.5)
+  
+  motp <- model@pi[mot.ind]
+  fatp <- model@pi[fat.ind]
+  offp <- model@pi[off.ind]
+  
+  m0 <- motp * fatp * offp
+  m1 <- motp * fatp * model@transmission_probs
+  
+  mendp <- m1 * 0.9 / (m1 + m0)
+  mi <- rbinom(n=length(mendp), 1, prob=mendp)
+  
+  nump <- mot.dens * fat.dens * off.dens * m0^(1-mi) + m1^mi
+  
+  geno.denom <- sum(nump)
+  geno.prob <- nump / geno.denom
+  geno.prob
+}
+
+jointProb <- function(model){
+  joint.pi <- matrix(NA, nrow(model@triodata2), length(model@transmission_probs))
+  
+  for (i in seq_len(nrow(model@triodata2))){
+    data.sum <- model@triodata2[i,c(2:4)]
+    joint.pi[i,] <- jointProb_calc(data.sum, model)
+  }
+  joint.pi  
+}
+
+update_zTrio <- function(model){
+  joint.pi <- jointProb(model)
+  ntrio <- nrow(joint.pi)
+  nprob <- ncol(joint.pi)
+  ztrio.matrix <- matrix(NA, nrow=ntrio, 3)
+  for (i in 1:ntrio){
+    index.select <- sample(1:nprob, 1, prob=joint.pi[i,])
+    genotype.assign <- as.numeric(model@genotypes.tbl[index.select,])
+    ztrio.matrix[i,] <- genotype.assign
+  }
+  ztrio.matrix
 }
 
 simulate_data_multi3 <- function(params, N, batches, error=0, mendelian.probs, maplabel){

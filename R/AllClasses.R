@@ -237,6 +237,7 @@ setClass("MultiBatchModel", contains="MixtureModel")
 
 setClass("TrioBatchModel", contains="MultiBatchModel",
          slots=c(triodata="tbl_df",
+                 triodata2="tbl_df",
                  mprob="matrix",
                  transmission_probs="numeric",
                  father="numeric",
