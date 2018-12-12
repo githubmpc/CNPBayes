@@ -80,7 +80,7 @@ Collate:
     'simulate_data.R'
 VignetteBuilder: knitr
 License: Artistic-2.0
-LinkingTo: Rcpp
+LinkingTo: Rcpp,RcppArmadillo
 biocViews: CopyNumberVariation, Bayesian
 Roxygen: list(wrap=FALSE)
 LazyData: TRUE

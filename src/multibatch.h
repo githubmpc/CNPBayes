@@ -1,6 +1,11 @@
 #ifndef _multibatch_H
 #define _multibatch_H
 
+#include <RcppArmadillo.h>
+
+using namespace Rcpp ;
+using namespace arma;
+
 
 Rcpp::IntegerVector sample_components(Rcpp::IntegerVector x, Rcpp::IntegerVector size,Rcpp::NumericVector prob) ;
 

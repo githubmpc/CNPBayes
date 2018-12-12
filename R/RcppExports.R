@@ -353,10 +353,6 @@ update_zchild <- function(xmod) {
     .Call('_CNPBayes_update_zchild', PACKAGE = 'CNPBayes', xmod)
 }
 
-update_multinomialPrFam <- function(xmod) {
-    .Call('_CNPBayes_update_multinomialPrFam', PACKAGE = 'CNPBayes', xmod)
-}
-
 update_mu2 <- function(xmod) {
     .Call('_CNPBayes_update_mu2', PACKAGE = 'CNPBayes', xmod)
 }
@@ -383,6 +379,22 @@ sample_trio_components <- function(x, size, prob) {
 
 predictive_trios <- function(xmod) {
     .Call('_CNPBayes_predictive_trios', PACKAGE = 'CNPBayes', xmod)
+}
+
+vector_dnorm <- function(x, means, sds) {
+    .Call('_CNPBayes_vector_dnorm', PACKAGE = 'CNPBayes', x, means, sds)
+}
+
+jointProb_compute <- function(datasumm, xmod, is_mend) {
+    .Call('_CNPBayes_jointProb_compute', PACKAGE = 'CNPBayes', datasumm, xmod, is_mend)
+}
+
+jointProbs <- function(xmod) {
+    .Call('_CNPBayes_jointProbs', PACKAGE = 'CNPBayes', xmod)
+}
+
+update_zTrios <- function(xmod) {
+    .Call('_CNPBayes_update_zTrios', PACKAGE = 'CNPBayes', xmod)
 }
 
 trios_burnin <- function(object, mcmcp) {

@@ -1,6 +1,10 @@
 #ifndef _miscfunctions_H
 #define _miscfunctions_H
-#include <Rcpp.h>
+//#include <Rcpp.h>
+#include <RcppArmadillo.h>
+
+using namespace Rcpp ;
+using namespace arma;
 
 
 // Access model values
