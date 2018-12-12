@@ -54,6 +54,7 @@
   log_ratio <- triodata$log_ratio
   batches <- triodata$batches
   triodata2 <- trio_tbl(triodata)
+  triodata3 <- as.matrix(triodata2[c(2:4)])
   triodata <- select(triodata, -c(log_ratio, batches))
   ub <- unique(batches)
   nbatch <- setNames(as.integer(table(batches)), ub)
@@ -117,6 +118,7 @@
              batch=batches,
              triodata=triodata,
              triodata2=triodata2,
+             triodata3=triodata3,
              mprob=mprob2,
              transmission_probs=trio.prob,
              maplabel=maplabel,
@@ -345,7 +347,7 @@ TrioBatchModel <- function(triodata=tibble(),
     ## Burnin with TBM model
     ##
     tbm <- .TBM(triodata, hp, mp.tmp, mprob, maplabel)
-    tbm <- runBurnin(tbm)
+    #tbm <- runBurnin(tbm)
     tabz1 <- table(batch(tbm), z(tbm))
     tabz2 <- table(z(tbm))
     validZ <- length(tabz2) == k(hp) && all(tabz1 > 1)
@@ -841,6 +843,7 @@ trio_tbl <- function(simdata.tbl){
   colnames(dat2) <- c("id","cm","cf","co")
   
   dat3 <- left_join(dat1, dat2, by=c("id"))
+  
   dat3
 }
 
@@ -884,7 +887,7 @@ simulate_data_multi2 <- function(params, N, batches,
   truth
 }
 
-jointProb_calc <- function(data.sum, model){
+jointProb_calc <- function(data.sum, model, is_mendel){
   
   mot.ind <- match(model@genotypes.tbl$cn.mot, maplabel)
   fat.ind <- match(model@genotypes.tbl$cn.fat, maplabel)
@@ -893,6 +896,7 @@ jointProb_calc <- function(data.sum, model){
   mot.dens <- dnorm(data.sum$lrrm, mean=model@theta[mot.ind], sd=(model@sigma2[mot.ind])^0.5)
   fat.dens <- dnorm(data.sum$lrrf, mean=model@theta[fat.ind], sd=(model@sigma2[fat.ind])^0.5)
   off.dens <- dnorm(data.sum$lrro, mean=model@theta[off.ind], sd=(model@sigma2[off.ind])^0.5)
+  trio.dens <- mot.dens * fat.dens * off.dens
   
   motp <- model@pi[mot.ind]
   fatp <- model@pi[fat.ind]
@@ -901,10 +905,13 @@ jointProb_calc <- function(data.sum, model){
   m0 <- motp * fatp * offp
   m1 <- motp * fatp * model@transmission_probs
   
-  mendp <- m1 * 0.9 / (m1 + m0)
-  mi <- rbinom(n=length(mendp), 1, prob=mendp)
+ #is_mendel <- isMendelian(model)
+ # mendp <- m1 * 0.9 / (m1 + m0)
+ # mi <- rbinom(n=length(mendp), 1, prob=mendp)
   
-  nump <- mot.dens * fat.dens * off.dens * m0^(1-mi) + m1^mi
+  #nump <- mot.dens * fat.dens * off.dens * (m0^(1-mi) + m1^mi)
+  ismendel <- rep(is_mendel==1, length(trio.dens))
+  nump <- ifelse(ismendel, trio.dens * m1, trio.dens * m0 )
   
   geno.denom <- sum(nump)
   geno.prob <- nump / geno.denom
@@ -916,7 +923,7 @@ jointProb <- function(model){
   
   for (i in seq_len(nrow(model@triodata2))){
     data.sum <- model@triodata2[i,c(2:4)]
-    joint.pi[i,] <- jointProb_calc(data.sum, model)
+    joint.pi[i,] <- wrap(jointProb_calc(data.sum, model, isMendelian(model)[i]))
   }
   joint.pi  
 }
