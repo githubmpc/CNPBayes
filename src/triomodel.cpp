@@ -1,11 +1,10 @@
-// [[Rcpp::depends(RcppArmadillo)]]
 
-//#include <RcppArmadillo.h>
-
-#include "miscfunctions.h" // for rdirichlet
 #include "multibatch.h" 
+#include "miscfunctions.h" // for rdirichlet
 #include <Rmath.h>
-#include <Rcpp.h>
+#include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
+//#include <Rcpp.h>
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -13,7 +12,7 @@
 #include <list>
 
 using namespace Rcpp ;
-//using namespace RcppArmadillo;
+using namespace arma;
 
 
 // [[Rcpp::export]]
@@ -637,68 +636,6 @@ Rcpp::IntegerVector update_zchild(Rcpp::S4 xmod) {
 
 
 // [[Rcpp::export]]
-Rcpp::NumericMatrix update_multinomialPrFam(Rcpp::S4 xmod) {
-  RNGScope scope ;
-  Rcpp::S4 model(clone(xmod)) ;
-  Rcpp::S4 hypp(model.slot("hyperparams")) ;
-  int K = getK(hypp) ;
-  IntegerVector batch = model.slot("batch") ;
-  IntegerVector ub = unique_batch(batch) ;
-  // Mendelian transmission probability matrix
-  NumericMatrix ptrio = update_trioPr2(xmod) ;
-  NumericVector p = model.slot("pi") ;
-  // commented by RS: pp is not unused
-  //NumericVector pp = model.slot("pi_parents") ;
-  NumericMatrix sigma2 = model.slot("sigma2") ;
-  NumericMatrix theta = model.slot("theta") ;
-  int B = sigma2.nrow() ;
-  NumericVector x = model.slot("data") ;
-  IntegerVector nb = model.slot("batchElements") ;
-  double df = getDf(hypp) ;
-  CharacterVector fam = family_member(xmod);
-  Rcpp::LogicalVector child_ind(fam.size());
-  // TODO:
-  double p_mendel=0.9;
-  // TODO: we do this with each MCMC iteration
-  for (int i = 0; i < fam.size(); i++){
-    child_ind[i] = (fam[i] == "o");
-  }
-  Rcpp::NumericVector xo = x[child_ind];
-  // Mendelian observations
-  int M = xo.size() ;
-  NumericMatrix lik(M, K) ;
-  NumericVector this_batch(M) ;
-  NumericVector tmp(M) ;
-  NumericVector tmp2(M) ;
-  NumericVector rowtotal(M) ;
-  // MC:  why do we multiply ptrio by p[k]?
-  for(int k = 0; k < K; ++k){
-    NumericVector dens(M) ;
-    for(int b = 0; b < B; ++b){
-      this_batch = batch == ub[b] ;
-      //tmp = p[k] * ptrio(_,k) *
-      //      dlocScale_t(xo, df, theta(b, k), sigma) * this_batch ;
-      double sigma = sqrt(sigma2(b, k));
-      NumericVector phi=dlocScale_t(xo, df, theta(b, k), sigma);
-      tmp = ptrio(_, k) * phi * this_batch ;
-      //tmp = ptrio(_, k) * phi * this_batch * (1 - p_mendel) ;
-      //tmp2 = p[k] * phi * this_batch * p_mendel ;
-      //tmp = tmp + tmp2 ;
-      dens += tmp ;
-    }
-    lik(_, k) = dens;
-    rowtotal += dens ;
-  }
-  NumericMatrix PC(M, K) ;
-  for(int k=0; k < K; ++k){
-    PC(_, k) = lik(_, k)/rowtotal ;
-  }
-  return PC;
-}
-
-
-
-// [[Rcpp::export]]
 Rcpp::NumericVector update_mu2(Rcpp::S4 xmod){
   RNGScope scope ;
   Rcpp::S4 model_(xmod);
@@ -974,6 +911,126 @@ Rcpp::S4 predictive_trios(Rcpp::S4 xmod){
   model.slot("predictive") = yy;
   model.slot("zstar") = zz ;
   return model ;
+}
+
+// [[Rcpp::export]]
+Rcpp::NumericVector vector_dnorm(NumericVector x, NumericVector means, NumericVector sds) {
+  RNGScope scope ;
+  int n = x.size() ;
+  NumericVector res(n) ;
+  for(int i=0; i<n; i++){
+    res[i] = R::dnorm(x[i], means[i], sds[i], false) ;
+  } 
+  return res ;
+}
+
+// [[Rcpp::export]]
+Rcpp::NumericVector jointProb_compute(Rcpp::NumericVector datasumm, Rcpp::S4 xmod, Rcpp::IntegerVector is_mend) {
+  RNGScope scope ;
+  Rcpp::S4 model(clone(xmod)) ;
+  Rcpp::DataFrame genotbl = wrap(model.slot("genotypes.tbl")) ;
+  IntegerVector map = model.slot("maplabel");
+  
+  IntegerVector genotbl_mot = genotbl["cn.mot"] ;
+  IntegerVector mot_ind = Rcpp::match(genotbl_mot, map) ;
+  IntegerVector mot_ind2 = mot_ind - 1 ;
+  IntegerVector genotbl_fat = genotbl["cn.fat"] ;
+  IntegerVector fat_ind = Rcpp::match(genotbl_fat, map) ;
+  IntegerVector fat_ind2 = fat_ind - 1 ;
+  IntegerVector genotbl_off = genotbl["cn.off"] ;
+  IntegerVector off_ind = Rcpp::match(genotbl_off, map) ;
+  IntegerVector off_ind2 = off_ind - 1 ;
+  
+  NumericVector dat_mot = datasumm[0] ;
+  int r = off_ind2.size() ;
+  dat_mot = rep(dat_mot, r) ;
+  NumericVector dat_fat = datasumm[1] ;
+  dat_fat = rep(dat_fat, r) ;
+  NumericVector dat_off = datasumm[2] ;
+  dat_off = rep(dat_off, r) ;
+  
+  NumericVector theta = model.slot("theta");
+  NumericVector sigma = model.slot("sigma2");
+  
+  NumericVector theta_mot = theta[mot_ind2] ;
+  NumericVector theta_fat = theta[fat_ind2] ;
+  NumericVector theta_off = theta[off_ind2] ;
+  
+  NumericVector sigma_mot = sigma[mot_ind2] ;
+  sigma_mot = Rcpp::pow(sigma_mot,0.5) ;
+  NumericVector sigma_fat = sigma[fat_ind2] ;
+  sigma_fat = Rcpp::pow(sigma_fat,0.5) ;
+  NumericVector sigma_off = sigma[off_ind2] ;
+  sigma_off = Rcpp::pow(sigma_off,0.5) ;
+  
+  NumericVector mot_dens = vector_dnorm(dat_mot, theta_mot, sigma_mot) ;
+  NumericVector fat_dens = vector_dnorm(dat_fat, theta_fat, sigma_fat) ;
+  NumericVector off_dens = vector_dnorm(dat_off, theta_off, sigma_off) ;
+  NumericVector trio_dens = mot_dens * fat_dens * off_dens ;
+  
+  NumericVector pi = model.slot("pi") ;
+  NumericVector pi_mot = pi[mot_ind2] ;
+  NumericVector pi_fat = pi[fat_ind2] ;
+  NumericVector pi_off = pi[off_ind2] ;
+  
+  NumericVector m0 = pi_mot * pi_fat * pi_off ;
+  NumericVector trans_prob = model.slot("transmission_probs") ;
+  NumericVector m1 = pi_mot * pi_fat * trans_prob ;
+  
+  LogicalVector ismendel = is_mend == 1 ;
+  ismendel = rep(ismendel, r) ;
+  
+  NumericVector nump = Rcpp::ifelse(ismendel, trio_dens * m1, trio_dens * m0) ;
+  double denom = Rcpp::sum(nump) ;
+  NumericVector geno_probs = nump/denom ;
+  
+  return geno_probs;
+
+}
+
+// [[Rcpp::export]]
+Rcpp::NumericMatrix jointProbs(Rcpp::S4 xmod){
+  RNGScope scope ;
+  Rcpp::S4 model(clone(xmod)) ;
+  Rcpp::NumericMatrix triodat3 = model.slot("triodata3") ;
+  int tnr = triodat3.nrow() ;
+  NumericVector trans_prob = model.slot("transmission_probs") ;
+  int tpr = trans_prob.size() ;
+  NumericMatrix joint_pi(tnr,tpr) ;
+  IntegerVector is_mend = model.slot("is_mendelian") ;
+  
+    
+  //for (int i=0; i < tnr; i++){
+  // NumericVector data_summ = triodat3(i,_) ;
+  // arma::rowvec rowv = Rcpp::as<arma::rowvec> (jointProb_compute(data_summ, model, is_mend[i]));
+  // joint_pi.row(i) = rowv ;
+  //}
+  
+  for (int i=0; i<tnr; i++){
+    NumericVector data_summ = triodat3(i,_) ;
+    joint_pi[Range(i, i+tnr-1)] += jointProb_compute(data_summ, model, is_mend[i]) ;
+  }
+  
+  
+  //return  Rcpp::wrap(joint_pi);
+  return  joint_pi;
+}
+
+// [[Rcpp::export]]
+Rcpp::NumericMatrix update_zTrios(Rcpp::S4 xmod){
+  RNGScope scope ;
+  Rcpp::S4 model(clone(xmod)) ;
+  //arma::mat joint_pi = jointProbs(model) ;
+  //int ntrio = joint_pi.nrow() ;
+  //int nprob = joint_pi.ncol() ;
+  //Rcpp::NumericMatrix ztrio_matrix(ntrio, nprob) ;
+  
+  
+  //for (int i=0; i < ntrio; i++){
+  //
+  //}
+  
+  //return ztrio_matrix;
 }
 
 // [[Rcpp::export]]
