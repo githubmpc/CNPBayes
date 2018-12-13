@@ -393,6 +393,10 @@ jointProbs <- function(xmod) {
     .Call('_CNPBayes_jointProbs', PACKAGE = 'CNPBayes', xmod)
 }
 
+update_cnTrios <- function(xmod) {
+    .Call('_CNPBayes_update_cnTrios', PACKAGE = 'CNPBayes', xmod)
+}
+
 update_zTrios <- function(xmod) {
     .Call('_CNPBayes_update_zTrios', PACKAGE = 'CNPBayes', xmod)
 }

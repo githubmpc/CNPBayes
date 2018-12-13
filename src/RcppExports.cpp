@@ -1116,8 +1116,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// update_cnTrios
+Rcpp::IntegerMatrix update_cnTrios(Rcpp::S4 xmod);
+RcppExport SEXP _CNPBayes_update_cnTrios(SEXP xmodSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::S4 >::type xmod(xmodSEXP);
+    rcpp_result_gen = Rcpp::wrap(update_cnTrios(xmod));
+    return rcpp_result_gen;
+END_RCPP
+}
 // update_zTrios
-Rcpp::NumericMatrix update_zTrios(Rcpp::S4 xmod);
+Rcpp::IntegerVector update_zTrios(Rcpp::S4 xmod);
 RcppExport SEXP _CNPBayes_update_zTrios(SEXP xmodSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -1274,6 +1285,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_CNPBayes_vector_dnorm", (DL_FUNC) &_CNPBayes_vector_dnorm, 3},
     {"_CNPBayes_jointProb_compute", (DL_FUNC) &_CNPBayes_jointProb_compute, 3},
     {"_CNPBayes_jointProbs", (DL_FUNC) &_CNPBayes_jointProbs, 1},
+    {"_CNPBayes_update_cnTrios", (DL_FUNC) &_CNPBayes_update_cnTrios, 1},
     {"_CNPBayes_update_zTrios", (DL_FUNC) &_CNPBayes_update_zTrios, 1},
     {"_CNPBayes_trios_burnin", (DL_FUNC) &_CNPBayes_trios_burnin, 2},
     {"_CNPBayes_test_trio", (DL_FUNC) &_CNPBayes_test_trio, 1},

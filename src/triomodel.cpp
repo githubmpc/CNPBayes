@@ -1028,7 +1028,7 @@ Rcpp::NumericMatrix jointProbs(Rcpp::S4 xmod){
 }
 
 // [[Rcpp::export]]
-Rcpp::NumericMatrix update_zTrios(Rcpp::S4 xmod){
+Rcpp::IntegerMatrix update_cnTrios(Rcpp::S4 xmod){
   RNGScope scope ;
   Rcpp::S4 model(clone(xmod)) ;
   NumericMatrix joint_pi = jointProbs(model) ;
@@ -1036,7 +1036,7 @@ Rcpp::NumericMatrix update_zTrios(Rcpp::S4 xmod){
   int nprob = joint_pi.ncol() ;
   IntegerVector sx = seq_len(nprob);
   Rcpp::IntegerMatrix genotbl = model.slot("genotypes.tbl") ;
-  NumericMatrix ztrio_matrix(ntrio,3) ;
+  IntegerMatrix ztrio_matrix(ntrio,3) ;
   
   for (int i=0; i < ntrio; i++){
     IntegerVector dex = Rcpp::RcppArmadillo::sample(sx, 1, true, joint_pi(i,_)) ;
@@ -1046,6 +1046,33 @@ Rcpp::NumericMatrix update_zTrios(Rcpp::S4 xmod){
   }
   
   return ztrio_matrix;
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector update_zTrios(Rcpp::S4 xmod){
+  // this function converts cnTrios back to components rather than CN
+  // and into one long vector
+  RNGScope scope ;
+  Rcpp::S4 model(clone(xmod)) ;
+  IntegerMatrix ztrios_matrix = update_cnTrios(model) ;
+  int zs = ztrios_matrix.size() ;
+  IntegerVector map = model.slot("maplabel");
+  IntegerVector ztrios(zs);
+  IntegerVector y3 = seq(1000,1005) ;
+  
+  for (int i=0; i < 3; i++){
+    IntegerVector zmv = ztrios_matrix(_,i) ;
+    IntegerVector zc = Rcpp::match(zmv, map) ;
+    int y1 = 1000 * i ;
+    int y2 = 1000 * (i+1) - 1 ;
+    IntegerVector y3 = seq(y1,y2) ;
+    //ztrios = ztrios.insert(1000*i,zc);
+    //ztrios(Range(y1,y2)) = zc;
+    ztrios[y3] = zc ;
+  }
+  //NumericVector ztrios = Rcpp::match(ztrios_matrix, map) ;
+  
+  return ztrios;
 }
 
 // [[Rcpp::export]]
