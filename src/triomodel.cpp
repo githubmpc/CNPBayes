@@ -1056,15 +1056,15 @@ Rcpp::IntegerVector update_zTrios(Rcpp::S4 xmod){
   Rcpp::S4 model(clone(xmod)) ;
   IntegerMatrix ztrios_matrix = update_cnTrios(model) ;
   int zs = ztrios_matrix.size() ;
+  int zr = ztrios_matrix.nrow() ;
   IntegerVector map = model.slot("maplabel");
   IntegerVector ztrios(zs);
-  IntegerVector y3 = seq(1000,1005) ;
   
-  for (int i=0; i < 3; i++){
-    IntegerVector zmv = ztrios_matrix(_,i) ;
+  for (int i=0; i < zr; i++){
+    IntegerVector zmv = ztrios_matrix(i,_) ;
     IntegerVector zc = Rcpp::match(zmv, map) ;
-    int y1 = 1000 * i ;
-    int y2 = 1000 * (i+1) - 1 ;
+    int y1 = 3 * i ;
+    int y2 = 3 * (i+1) - 1 ;
     IntegerVector y3 = seq(y1,y2) ;
     //ztrios = ztrios.insert(1000*i,zc);
     //ztrios(Range(y1,y2)) = zc;
@@ -1178,17 +1178,15 @@ Rcpp::S4 trios_mcmc(Rcpp::S4 object, Rcpp::S4 mcmcp) {
   IntegerVector zstar = IntegerVector(B*K);
   for(int s = 0; s < (S + 1); ++s){
     // update z for every one (independence)
-    z = update_z(model) ;
+    z = update_zTrios(model) ;
     model.slot("z") = z ;
     // z frequency of parents
     tmp = tableZpar(model) ;
     model.slot("zfreq_parents") = tmp ;
     zfreq_parents(s, _) = tmp ;
     // updates integer matrix of slot probz for only the parents
-    model.slot("probz_par") = update_probzpar(model) ;
+    //model.slot("probz_par") = update_probzpar(model) ;
     // updates z slot only for the offspring
-    z = update_zchild(model) ;
-    model.slot("z") = z ;
     model.slot("probz") = update_probz(model) ;
     tmp = tableZ(K, model.slot("z")) ;
     // updates integer matrix of slot probz for all individuals
@@ -1237,8 +1235,8 @@ Rcpp::S4 trios_mcmc(Rcpp::S4 object, Rcpp::S4 mcmcp) {
     zstar_(s, _) = zstar ;
     // Thinning
     for(int t = 0; t < T; ++t){
-      model.slot("z") = update_z(model) ;
-      model.slot("zfreq_parents") = tableZpar(model) ;
+      model.slot("z") = update_zTrios(model) ;
+      //model.slot("zfreq_parents") = tableZpar(model) ;
       model.slot("sigma2") = update_sigma2(model) ;
       model.slot("nu.0") = update_nu0(model) ;
       model.slot("sigma2.0") = update_sigma20(model) ;

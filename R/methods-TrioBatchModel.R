@@ -232,6 +232,7 @@ combine_batchTrios <- function(model.list, batches){
   mp <- mcmcParams(model.list[[1]])
   triodata <- model.list[[1]]@triodata
   triodata2 <- model.list[[1]]@triodata2
+  triodata3 <- model.list[[1]]@triodata3
   mprob <- model.list[[1]]@mprob
   transmission_probs <- model.list[[1]]@transmission_probs
   father <- model.list[[1]]@father
@@ -276,6 +277,7 @@ combine_batchTrios <- function(model.list, batches){
   model <- new(class(model.list[[1]]),
                triodata=triodata,
                triodata2=triodata2,
+               triodata3=triodata3,
                mprob=mprob,
                transmission_probs=transmission_probs,
                father=father,
