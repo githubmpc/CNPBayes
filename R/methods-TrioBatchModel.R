@@ -55,6 +55,9 @@
   batches <- triodata$batches
   triodata2 <- trio_tbl(triodata)
   triodata3 <- as.matrix(triodata2[c(2:4)])
+  tnrow <- nrow(triodata3)
+  mendeli_p <- rbeta(1,1,1)
+  is_mendeli <- rbinom(tnrow, 1, mendeli_p)
   triodata <- select(triodata, -c(log_ratio, batches))
   ub <- unique(batches)
   nbatch <- setNames(as.integer(table(batches)), ub)
@@ -97,7 +100,6 @@
   colnames(genotype.df) <- c("cn.mot","cn.fat","cn.off")
   mprob.unlist <- mprob2[,c(1:K)]
   trio.prob <- c(t(mprob.unlist))
-  is_mendel <- rep(1L, T)
   ##zamp <- sample(seq_len(K), N, replace=TRUE)
   ##is_offspring <- model@triodata$family_member=="o"
   # write R update z module
@@ -143,7 +145,7 @@
              marginal_lik=as.numeric(NA),
              father=as.integer(father),
              mother=as.integer(mother),
-             is_mendelian=is_mendel,
+             is_mendelian=is_mendeli,
              .internal.constraint=5e-4,
              .internal.counter=0L)
   obj
