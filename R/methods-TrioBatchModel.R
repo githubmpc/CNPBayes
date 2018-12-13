@@ -93,7 +93,7 @@
   father <- mprob[, "father"]
   mother <- mprob[, "mother"]
   gdf <- length(maplabel)
-  genotype.df <- data.frame(permutations(gdf,3,c(maplabel), repeats.allowed=T))
+  genotype.df <- permutations(gdf,3,c(maplabel), repeats.allowed=T)
   colnames(genotype.df) <- c("cn.mot","cn.fat","cn.off")
   mprob.unlist <- mprob2[,c(1:K)]
   trio.prob <- c(t(mprob.unlist))
@@ -889,9 +889,9 @@ simulate_data_multi2 <- function(params, N, batches,
 
 jointProb_calc <- function(data.sum, model, is_mendel){
   
-  mot.ind <- match(model@genotypes.tbl$cn.mot, maplabel)
-  fat.ind <- match(model@genotypes.tbl$cn.fat, maplabel)
-  off.ind <- match(model@genotypes.tbl$cn.off, maplabel)
+  mot.ind <- match(model@genotypes.tbl[,1], maplabel)
+  fat.ind <- match(model@genotypes.tbl[,2], maplabel)
+  off.ind <- match(model@genotypes.tbl[,3], maplabel)
   
   mot.dens <- dnorm(data.sum$lrrm, mean=model@theta[mot.ind], sd=(model@sigma2[mot.ind])^0.5)
   fat.dens <- dnorm(data.sum$lrrf, mean=model@theta[fat.ind], sd=(model@sigma2[fat.ind])^0.5)
@@ -906,8 +906,8 @@ jointProb_calc <- function(data.sum, model, is_mendel){
   m1 <- motp * fatp * model@transmission_probs
   
  #is_mendel <- isMendelian(model)
- # mendp <- m1 * 0.9 / (m1 + m0)
- # mi <- rbinom(n=length(mendp), 1, prob=mendp)
+  #mendp <- m1 * 0.9 / (m1 + m0)
+  #mi <- rbinom(n=length(mendp), 1, prob=mendp)
   
   #nump <- mot.dens * fat.dens * off.dens * (m0^(1-mi) + m1^mi)
   ismendel <- rep(is_mendel==1, length(trio.dens))
@@ -923,7 +923,7 @@ jointProb <- function(model){
   
   for (i in seq_len(nrow(model@triodata2))){
     data.sum <- model@triodata2[i,c(2:4)]
-    joint.pi[i,] <- wrap(jointProb_calc(data.sum, model, isMendelian(model)[i]))
+    joint.pi[i,] <- jointProb_calc(data.sum, model, isMendelian(model)[i])
   }
   joint.pi  
 }

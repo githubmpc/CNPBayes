@@ -1093,14 +1093,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // jointProb_compute
-Rcpp::NumericVector jointProb_compute(Rcpp::NumericVector datasumm, Rcpp::S4 xmod, Rcpp::IntegerVector is_mend);
+Rcpp::NumericVector jointProb_compute(NumericVector datasumm, Rcpp::S4 xmod, int is_mend);
 RcppExport SEXP _CNPBayes_jointProb_compute(SEXP datasummSEXP, SEXP xmodSEXP, SEXP is_mendSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type datasumm(datasummSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type datasumm(datasummSEXP);
     Rcpp::traits::input_parameter< Rcpp::S4 >::type xmod(xmodSEXP);
-    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type is_mend(is_mendSEXP);
+    Rcpp::traits::input_parameter< int >::type is_mend(is_mendSEXP);
     rcpp_result_gen = Rcpp::wrap(jointProb_compute(datasumm, xmod, is_mend));
     return rcpp_result_gen;
 END_RCPP

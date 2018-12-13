@@ -5,6 +5,7 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 //#include <Rcpp.h>
+#include <RcppArmadilloExtensions/sample.h>
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -925,29 +926,34 @@ Rcpp::NumericVector vector_dnorm(NumericVector x, NumericVector means, NumericVe
 }
 
 // [[Rcpp::export]]
-Rcpp::NumericVector jointProb_compute(Rcpp::NumericVector datasumm, Rcpp::S4 xmod, Rcpp::IntegerVector is_mend) {
+Rcpp::NumericVector jointProb_compute(NumericVector datasumm, Rcpp::S4 xmod, int is_mend) {
   RNGScope scope ;
   Rcpp::S4 model(clone(xmod)) ;
-  Rcpp::DataFrame genotbl = wrap(model.slot("genotypes.tbl")) ;
+  //Rcpp::DataFrame genotbl = wrap(model.slot("genotypes.tbl")) ;
+  Rcpp::IntegerMatrix genotbl = model.slot("genotypes.tbl") ;
   IntegerVector map = model.slot("maplabel");
   
-  IntegerVector genotbl_mot = genotbl["cn.mot"] ;
+  //IntegerVector genotbl_mot = genotbl["cn.mot"] ;
+  IntegerVector genotbl_mot = genotbl(_,0) ;
   IntegerVector mot_ind = Rcpp::match(genotbl_mot, map) ;
   IntegerVector mot_ind2 = mot_ind - 1 ;
-  IntegerVector genotbl_fat = genotbl["cn.fat"] ;
+  //IntegerVector genotbl_fat = genotbl["cn.fat"] ;
+  IntegerVector genotbl_fat = genotbl(_,1) ;
   IntegerVector fat_ind = Rcpp::match(genotbl_fat, map) ;
   IntegerVector fat_ind2 = fat_ind - 1 ;
-  IntegerVector genotbl_off = genotbl["cn.off"] ;
+  //IntegerVector genotbl_off = genotbl["cn.off"] ;
+  IntegerVector genotbl_off = genotbl(_,2) ;
   IntegerVector off_ind = Rcpp::match(genotbl_off, map) ;
   IntegerVector off_ind2 = off_ind - 1 ;
   
-  NumericVector dat_mot = datasumm[0] ;
+  
+  double dat_mot = datasumm(0) ;
   int r = off_ind2.size() ;
-  dat_mot = rep(dat_mot, r) ;
-  NumericVector dat_fat = datasumm[1] ;
-  dat_fat = rep(dat_fat, r) ;
-  NumericVector dat_off = datasumm[2] ;
-  dat_off = rep(dat_off, r) ;
+  NumericVector dat_mot2 = rep(dat_mot, r) ;
+  double dat_fat = datasumm(1) ;
+  NumericVector dat_fat2 = rep(dat_fat, r) ;
+  double dat_off = datasumm(2) ;
+  NumericVector dat_off2 = rep(dat_off, r) ;
   
   NumericVector theta = model.slot("theta");
   NumericVector sigma = model.slot("sigma2");
@@ -963,9 +969,9 @@ Rcpp::NumericVector jointProb_compute(Rcpp::NumericVector datasumm, Rcpp::S4 xmo
   NumericVector sigma_off = sigma[off_ind2] ;
   sigma_off = Rcpp::pow(sigma_off,0.5) ;
   
-  NumericVector mot_dens = vector_dnorm(dat_mot, theta_mot, sigma_mot) ;
-  NumericVector fat_dens = vector_dnorm(dat_fat, theta_fat, sigma_fat) ;
-  NumericVector off_dens = vector_dnorm(dat_off, theta_off, sigma_off) ;
+  NumericVector mot_dens = vector_dnorm(dat_mot2, theta_mot, sigma_mot) ;
+  NumericVector fat_dens = vector_dnorm(dat_fat2, theta_fat, sigma_fat) ;
+  NumericVector off_dens = vector_dnorm(dat_off2, theta_off, sigma_off) ;
   NumericVector trio_dens = mot_dens * fat_dens * off_dens ;
   
   NumericVector pi = model.slot("pi") ;
@@ -999,18 +1005,23 @@ Rcpp::NumericMatrix jointProbs(Rcpp::S4 xmod){
   NumericMatrix joint_pi(tnr,tpr) ;
   IntegerVector is_mend = model.slot("is_mendelian") ;
   
-    
   //for (int i=0; i < tnr; i++){
   // NumericVector data_summ = triodat3(i,_) ;
   // arma::rowvec rowv = Rcpp::as<arma::rowvec> (jointProb_compute(data_summ, model, is_mend[i]));
   // joint_pi.row(i) = rowv ;
   //}
   
+  //for (int i=0; i<tnr; i++){
+  //  NumericVector data_summ = triodat3(i,_) ;
+  //  joint_pi[Range(i, i+tnr-1)] += jointProb_compute(data_summ, model, is_mend[i]) ;
+  //}
+  
   for (int i=0; i<tnr; i++){
     NumericVector data_summ = triodat3(i,_) ;
-    joint_pi[Range(i, i+tnr-1)] += jointProb_compute(data_summ, model, is_mend[i]) ;
+    NumericVector prob_row = jointProb_compute(data_summ, model, is_mend[i]) ;
+    //NumericVector prob_row(tpr);
+    joint_pi(i,_) = prob_row ;
   }
-  
   
   //return  Rcpp::wrap(joint_pi);
   return  joint_pi;
@@ -1020,17 +1031,21 @@ Rcpp::NumericMatrix jointProbs(Rcpp::S4 xmod){
 Rcpp::NumericMatrix update_zTrios(Rcpp::S4 xmod){
   RNGScope scope ;
   Rcpp::S4 model(clone(xmod)) ;
-  //arma::mat joint_pi = jointProbs(model) ;
-  //int ntrio = joint_pi.nrow() ;
-  //int nprob = joint_pi.ncol() ;
-  //Rcpp::NumericMatrix ztrio_matrix(ntrio, nprob) ;
+  NumericMatrix joint_pi = jointProbs(model) ;
+  int ntrio = joint_pi.nrow() ;
+  int nprob = joint_pi.ncol() ;
+  IntegerVector sx = seq_len(nprob);
+  Rcpp::IntegerMatrix genotbl = model.slot("genotypes.tbl") ;
+  NumericMatrix ztrio_matrix(ntrio,3) ;
   
+  for (int i=0; i < ntrio; i++){
+    IntegerVector dex = Rcpp::RcppArmadillo::sample(sx, 1, true, joint_pi(i,_)) ;
+    int dex2 = as<int>(dex) - 1 ;
+    IntegerVector rowsel = genotbl(dex2,_) ;
+    ztrio_matrix(i,_) = rowsel ;
+  }
   
-  //for (int i=0; i < ntrio; i++){
-  //
-  //}
-  
-  //return ztrio_matrix;
+  return ztrio_matrix;
 }
 
 // [[Rcpp::export]]
