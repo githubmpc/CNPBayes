@@ -313,6 +313,10 @@ update_trioPr2 <- function(xmod) {
     .Call('_CNPBayes_update_trioPr2', PACKAGE = 'CNPBayes', xmod)
 }
 
+update_mendprior <- function(xmod) {
+    .Call('_CNPBayes_update_mendprior', PACKAGE = 'CNPBayes', xmod)
+}
+
 update_mendelian <- function(xmod) {
     .Call('_CNPBayes_update_mendelian', PACKAGE = 'CNPBayes', xmod)
 }

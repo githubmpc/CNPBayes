@@ -239,6 +239,7 @@ combine_batchTrios <- function(model.list, batches){
   mother <- model.list[[1]]@mother
   maplabel <- model.list[[1]]@maplabel
   genotypes.tbl <- model.list[[1]]@genotypes.tbl
+  is_mendeli <- model.list[[1]]@is_mendelian
   iter(mp) <- nrow(th)
   B <- length(unique(batches))
   K <- k(model.list[[1]])
@@ -284,6 +285,7 @@ combine_batchTrios <- function(model.list, batches){
                mother=mother,
                maplabel=maplabel,
                genotypes.tbl=genotypes.tbl,
+               is_mendelian=is_mendeli,
                k=k(hp),
                hyperparams=hp,
                theta=pm.th,

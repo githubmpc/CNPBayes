@@ -167,6 +167,19 @@ Rcpp::NumericMatrix update_trioPr2(Rcpp::S4 xmod){
 }
 
 // [[Rcpp::export]]
+double update_mendprior(Rcpp::S4 xmod){
+  RNGScope scope ;
+  Rcpp::S4 model(clone(xmod)) ;
+  IntegerVector mend_ind = model.slot("is_mendelian");
+  int mend_tot = mend_ind.size() ;
+  int mend_count = sum(mend_ind) ;
+  int mend_zero = mend_tot - mend_count ;
+  NumericVector mend_p = rbeta(1, 1 + mend_count, 1 + mend_zero) ;
+  double mend_prob = as<double>(mend_p) ;
+  return mend_prob;
+}
+
+// [[Rcpp::export]]
 Rcpp::IntegerVector update_mendelian(Rcpp::S4 xmod) {
   RNGScope scope ;
   Rcpp::S4 model(clone(xmod)) ;
@@ -181,7 +194,8 @@ Rcpp::IntegerVector update_mendelian(Rcpp::S4 xmod) {
   }
   Rcpp::IntegerVector zo = z[child_ind];
   // TODO: prior probability for mendelian indicator
-  double m_prior = 0.9 ;
+  //double m_prior = 0.9 ;
+  double m_prior = update_mendprior(model) ;
   double numer;
   double denom;
   NumericMatrix ptrio = update_trioPr(model) ;
