@@ -213,6 +213,7 @@ Rcpp::IntegerVector update_mendelian(Rcpp::S4 xmod) {
     numer=ptrio(i, _)[ cn ] * m_prior;
     denom=numer + p[ cn ] * (1-m_prior) ;
     prob_mendel = numer/denom ;
+    //mendel[i] = rbinom(1,1,prob_mendel) ;
     u = runif(1) ;
     if(u[0] <= prob_mendel){
       mendel[i] = 1 ;
@@ -538,7 +539,7 @@ Rcpp::NumericMatrix update_multinomialPrChild(Rcpp::S4 xmod) {
   CharacterVector fam = family_member(xmod);
   Rcpp::LogicalVector child_ind(fam.size());
   // TODO:
-  double p_mendel=0.9;
+  //double p_mendel=0.9;
   // TODO: we do this with each MCMC iteration
   for (int i = 0; i < fam.size(); i++){
     child_ind[i] = (fam[i] == "o");
@@ -1019,25 +1020,12 @@ Rcpp::NumericMatrix jointProbs(Rcpp::S4 xmod){
   NumericMatrix joint_pi(tnr,tpr) ;
   IntegerVector is_mend = model.slot("is_mendelian") ;
   
-  //for (int i=0; i < tnr; i++){
-  // NumericVector data_summ = triodat3(i,_) ;
-  // arma::rowvec rowv = Rcpp::as<arma::rowvec> (jointProb_compute(data_summ, model, is_mend[i]));
-  // joint_pi.row(i) = rowv ;
-  //}
-  
-  //for (int i=0; i<tnr; i++){
-  //  NumericVector data_summ = triodat3(i,_) ;
-  //  joint_pi[Range(i, i+tnr-1)] += jointProb_compute(data_summ, model, is_mend[i]) ;
-  //}
-  
   for (int i=0; i<tnr; i++){
     NumericVector data_summ = triodat3(i,_) ;
     NumericVector prob_row = jointProb_compute(data_summ, model, is_mend[i]) ;
-    //NumericVector prob_row(tpr);
     joint_pi(i,_) = prob_row ;
   }
   
-  //return  Rcpp::wrap(joint_pi);
   return  joint_pi;
 }
 
@@ -1046,8 +1034,10 @@ Rcpp::IntegerMatrix update_cnTrios(Rcpp::S4 xmod){
   RNGScope scope ;
   Rcpp::S4 model(clone(xmod)) ;
   NumericMatrix joint_pi = jointProbs(model) ;
-  int ntrio = joint_pi.nrow() ;
-  int nprob = joint_pi.ncol() ;
+  Rcpp::NumericMatrix triodat3 = model.slot("triodata3") ;
+  int ntrio = triodat3.nrow() ;
+  NumericVector trans_prob = model.slot("transmission_probs") ;
+  int nprob = trans_prob.size() ;
   IntegerVector sx = seq_len(nprob);
   Rcpp::IntegerMatrix genotbl = model.slot("genotypes.tbl") ;
   IntegerMatrix ztrio_matrix(ntrio,3) ;
@@ -1102,14 +1092,13 @@ Rcpp::S4 trios_burnin(Rcpp::S4 object, Rcpp::S4 mcmcp) {
   int N = x.size() ;
   double df = getDf(model.slot("hyperparams")) ;
   for(int s = 1; s < S; ++s){
-    model.slot("z") = update_z(model) ;
+    model.slot("z") = update_zTrios(model) ;
     model.slot("zfreq_parents") = tableZpar(model) ;
+    model.slot("zfreq") = tableZ(K, model.slot("z")) ;
     model.slot("sigma2") = update_sigma2(model) ;
     model.slot("nu.0") = update_nu0(model) ;
     model.slot("sigma2.0") = update_sigma20(model) ;
-    model.slot("z") = update_zchild(model) ;
     model.slot("is_mendelian") = update_mendelian(model) ;
-    model.slot("zfreq") = tableZ(K, model.slot("z")) ;
     model.slot("theta") = update_theta(model) ;
     model.slot("mu") = update_mu(model) ;
     model.slot("tau2") = update_tau2(model) ;
@@ -1254,7 +1243,7 @@ Rcpp::S4 trios_mcmc(Rcpp::S4 object, Rcpp::S4 mcmcp) {
       model.slot("sigma2") = update_sigma2(model) ;
       model.slot("nu.0") = update_nu0(model) ;
       model.slot("sigma2.0") = update_sigma20(model) ;
-      model.slot("z") = update_zchild(model) ;
+      //model.slot("z") = update_zchild(model) ;
       model.slot("is_mendelian") = update_mendelian(model) ;
       model.slot("zfreq") = tableZ(K, model.slot("z")) ;
       model.slot("theta") = update_theta(model) ;

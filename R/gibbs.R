@@ -738,7 +738,6 @@ gibbs_trios_K <- function(hp,
 
 gibbs_trios <- function(model="TBM",
                         dat,
-                        trio_data,
                         mp,
                         mprob,
                         maplabel,
