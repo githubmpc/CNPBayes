@@ -1058,9 +1058,11 @@ Rcpp::IntegerVector update_zTrios(Rcpp::S4 xmod){
   // and into one long vector
   RNGScope scope ;
   Rcpp::S4 model(clone(xmod)) ;
+  Rcpp::S4 hypp(model.slot("hyperparams")) ;
   IntegerMatrix ztrios_matrix = update_cnTrios(model) ;
   int zs = ztrios_matrix.size() ;
   int zr = ztrios_matrix.nrow() ;
+  int K = getK(hypp) ;
   IntegerVector map = model.slot("maplabel");
   IntegerVector ztrios(zs);
   
@@ -1076,7 +1078,16 @@ Rcpp::IntegerVector update_zTrios(Rcpp::S4 xmod){
   }
   //NumericVector ztrios = Rcpp::match(ztrios_matrix, map) ;
   
-  return ztrios;
+  IntegerVector freq = unique(ztrios) ;
+  int fx = freq.size() ;
+  if(fx==K){
+    return ztrios ;
+  }
+  
+  int counter = model.slot(".internal.counter");
+  counter++;
+  model.slot(".internal.counter") = counter;
+  return model.slot("z") ;
 }
 
 // [[Rcpp::export]]
