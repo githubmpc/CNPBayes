@@ -912,39 +912,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// update_multinomialPrPar
-Rcpp::NumericMatrix update_multinomialPrPar(Rcpp::S4 xmod);
-RcppExport SEXP _CNPBayes_update_multinomialPrPar(SEXP xmodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::S4 >::type xmod(xmodSEXP);
-    rcpp_result_gen = Rcpp::wrap(update_multinomialPrPar(xmod));
-    return rcpp_result_gen;
-END_RCPP
-}
-// update_parents
-Rcpp::IntegerVector update_parents(Rcpp::S4 xmod);
-RcppExport SEXP _CNPBayes_update_parents(SEXP xmodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::S4 >::type xmod(xmodSEXP);
-    rcpp_result_gen = Rcpp::wrap(update_parents(xmod));
-    return rcpp_result_gen;
-END_RCPP
-}
-// update_zparents
-Rcpp::IntegerVector update_zparents(Rcpp::S4 xmod);
-RcppExport SEXP _CNPBayes_update_zparents(SEXP xmodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::S4 >::type xmod(xmodSEXP);
-    rcpp_result_gen = Rcpp::wrap(update_zparents(xmod));
-    return rcpp_result_gen;
-END_RCPP
-}
 // tableZpar
 Rcpp::IntegerVector tableZpar(Rcpp::S4 xmod);
 RcppExport SEXP _CNPBayes_tableZpar(SEXP xmodSEXP) {
@@ -975,39 +942,6 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::S4 >::type xmod(xmodSEXP);
     rcpp_result_gen = Rcpp::wrap(update_pp(xmod));
-    return rcpp_result_gen;
-END_RCPP
-}
-// update_multinomialPrChild
-Rcpp::NumericMatrix update_multinomialPrChild(Rcpp::S4 xmod);
-RcppExport SEXP _CNPBayes_update_multinomialPrChild(SEXP xmodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::S4 >::type xmod(xmodSEXP);
-    rcpp_result_gen = Rcpp::wrap(update_multinomialPrChild(xmod));
-    return rcpp_result_gen;
-END_RCPP
-}
-// update_offspring
-Rcpp::IntegerVector update_offspring(Rcpp::S4 xmod);
-RcppExport SEXP _CNPBayes_update_offspring(SEXP xmodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::S4 >::type xmod(xmodSEXP);
-    rcpp_result_gen = Rcpp::wrap(update_offspring(xmod));
-    return rcpp_result_gen;
-END_RCPP
-}
-// update_zchild
-Rcpp::IntegerVector update_zchild(Rcpp::S4 xmod);
-RcppExport SEXP _CNPBayes_update_zchild(SEXP xmodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::S4 >::type xmod(xmodSEXP);
-    rcpp_result_gen = Rcpp::wrap(update_zchild(xmod));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1278,15 +1212,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_CNPBayes_update_trioPr2", (DL_FUNC) &_CNPBayes_update_trioPr2, 1},
     {"_CNPBayes_update_mendprior", (DL_FUNC) &_CNPBayes_update_mendprior, 1},
     {"_CNPBayes_update_mendelian", (DL_FUNC) &_CNPBayes_update_mendelian, 1},
-    {"_CNPBayes_update_multinomialPrPar", (DL_FUNC) &_CNPBayes_update_multinomialPrPar, 1},
-    {"_CNPBayes_update_parents", (DL_FUNC) &_CNPBayes_update_parents, 1},
-    {"_CNPBayes_update_zparents", (DL_FUNC) &_CNPBayes_update_zparents, 1},
     {"_CNPBayes_tableZpar", (DL_FUNC) &_CNPBayes_tableZpar, 1},
     {"_CNPBayes_tableBatchZpar", (DL_FUNC) &_CNPBayes_tableBatchZpar, 1},
     {"_CNPBayes_update_pp", (DL_FUNC) &_CNPBayes_update_pp, 1},
-    {"_CNPBayes_update_multinomialPrChild", (DL_FUNC) &_CNPBayes_update_multinomialPrChild, 1},
-    {"_CNPBayes_update_offspring", (DL_FUNC) &_CNPBayes_update_offspring, 1},
-    {"_CNPBayes_update_zchild", (DL_FUNC) &_CNPBayes_update_zchild, 1},
     {"_CNPBayes_update_mu2", (DL_FUNC) &_CNPBayes_update_mu2, 1},
     {"_CNPBayes_compute_vars2", (DL_FUNC) &_CNPBayes_compute_vars2, 1},
     {"_CNPBayes_compute_prec2", (DL_FUNC) &_CNPBayes_compute_prec2, 1},
