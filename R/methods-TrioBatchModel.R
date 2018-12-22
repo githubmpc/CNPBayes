@@ -57,7 +57,7 @@
   triodata3 <- as.matrix(triodata2[c(2:4)])
   tnrow <- nrow(triodata3)
   mendeli_p <- rbeta(1,1,1)
-  is_mendeli <- rbinom(tnrow, 1, mendeli_p)
+  is_mendeli <- rbinom(tnrow, 1, 1)
   triodata <- select(triodata, -c(log_ratio, batches))
   ub <- unique(batches)
   nbatch <- setNames(as.integer(table(batches)), ub)

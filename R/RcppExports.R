@@ -369,6 +369,10 @@ jointProb_compute <- function(datasumm, xmod, is_mend) {
     .Call('_CNPBayes_jointProb_compute', PACKAGE = 'CNPBayes', datasumm, xmod, is_mend)
 }
 
+jointProb_compute2 <- function(datasumm, multinom_dens, xmod, is_mend) {
+    .Call('_CNPBayes_jointProb_compute2', PACKAGE = 'CNPBayes', datasumm, multinom_dens, xmod, is_mend)
+}
+
 jointProbs <- function(xmod) {
     .Call('_CNPBayes_jointProbs', PACKAGE = 'CNPBayes', xmod)
 }

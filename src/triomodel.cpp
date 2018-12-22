@@ -645,8 +645,59 @@ Rcpp::NumericVector jointProb_compute(NumericVector datasumm, Rcpp::S4 xmod, int
   double denom = Rcpp::sum(nump) ;
   NumericVector geno_probs = nump/denom ;
   
+  return mot_dens;
   return geno_probs;
 
+}
+
+// [[Rcpp::export]]
+Rcpp::NumericVector jointProb_compute2(NumericVector datasumm, NumericMatrix multinom_dens, Rcpp::S4 xmod, int is_mend) {
+  RNGScope scope ;
+  Rcpp::S4 model(clone(xmod)) ;
+  //Rcpp::DataFrame genotbl = wrap(model.slot("genotypes.tbl")) ;
+  Rcpp::IntegerMatrix genotbl = model.slot("genotypes.tbl") ;
+  IntegerVector map = model.slot("maplabel");
+  
+  //IntegerVector genotbl_mot = genotbl["cn.mot"] ;
+  IntegerVector genotbl_mot = genotbl(_,0) ;
+  IntegerVector mot_ind = Rcpp::match(genotbl_mot, map) ;
+  IntegerVector mot_ind2 = mot_ind - 1 ;
+  //IntegerVector genotbl_fat = genotbl["cn.fat"] ;
+  IntegerVector genotbl_fat = genotbl(_,1) ;
+  IntegerVector fat_ind = Rcpp::match(genotbl_fat, map) ;
+  IntegerVector fat_ind2 = fat_ind - 1 ;
+  //IntegerVector genotbl_off = genotbl["cn.off"] ;
+  IntegerVector genotbl_off = genotbl(_,2) ;
+  IntegerVector off_ind = Rcpp::match(genotbl_off, map) ;
+  IntegerVector off_ind2 = off_ind - 1 ;
+  int r = off_ind2.size() ;
+  
+  NumericVector mot_dens = multinom_dens(0,_) ;
+  NumericVector mot_dens2 = mot_dens[mot_ind2] ;
+  NumericVector fat_dens = multinom_dens(1,_) ;
+  NumericVector fat_dens2 = fat_dens[fat_ind2] ;
+  NumericVector off_dens = multinom_dens(2,_) ;
+  NumericVector off_dens2 = off_dens[off_ind2] ;
+  NumericVector trio_dens = mot_dens2 * fat_dens2 * off_dens2 ;
+  
+  NumericVector pi = model.slot("pi") ;
+  NumericVector pi_mot = pi[mot_ind2] ;
+  NumericVector pi_fat = pi[fat_ind2] ;
+  NumericVector pi_off = pi[off_ind2] ;
+  
+  NumericVector m0 = pi_mot * pi_fat * pi_off ;
+  NumericVector trans_prob = model.slot("transmission_probs") ;
+  NumericVector m1 = pi_mot * pi_fat * trans_prob ;
+  
+  LogicalVector ismendel = is_mend == 1 ;
+  ismendel = rep(ismendel, r) ;
+  
+  NumericVector nump = Rcpp::ifelse(ismendel, trio_dens * m1, trio_dens * m0) ;
+  double denom = Rcpp::sum(nump) ;
+  NumericVector geno_probs = nump/denom ;
+  
+  return geno_probs;
+  
 }
 
 // [[Rcpp::export]]
@@ -660,9 +711,22 @@ Rcpp::NumericMatrix jointProbs(Rcpp::S4 xmod){
   NumericMatrix joint_pi(tnr,tpr) ;
   IntegerVector is_mend = model.slot("is_mendelian") ;
   
+  Rcpp::S4 hypp(model.slot("hyperparams")) ;
+  int K = getK(hypp) ;
+  NumericVector x = model.slot("data") ;
+  NumericMatrix theta = model.slot("theta") ;
+  IntegerVector batch = model.slot("batch") ;
+  int n = x.size() ;
+  NumericMatrix pdens(n, K);
+  pdens = update_multinomialPr(xmod) ;
+  
   for (int i=0; i<tnr; i++){
     NumericVector data_summ = triodat3(i,_) ;
-    NumericVector prob_row = jointProb_compute(data_summ, model, is_mend[i]) ;
+    int r1 = 3 * i ;
+    int r2 = 3 * (i + 1) - 1 ;
+    Rcpp::NumericMatrix multinomdens = pdens(Rcpp::Range(r1,r2),_) ;
+    //NumericVector prob_row = jointProb_compute(data_summ, model, is_mend[i]) ;
+    NumericVector prob_row = jointProb_compute2(data_summ, multinomdens, model, is_mend[i]) ;
     joint_pi(i,_) = prob_row ;
   }
   
@@ -747,7 +811,7 @@ Rcpp::S4 trios_burnin(Rcpp::S4 object, Rcpp::S4 mcmcp) {
     model.slot("sigma2") = update_sigma2(model) ;
     model.slot("nu.0") = update_nu0(model) ;
     model.slot("sigma2.0") = update_sigma20(model) ;
-    model.slot("is_mendelian") = update_mendelian(model) ;
+    //model.slot("is_mendelian") = update_mendelian(model) ;
     model.slot("theta") = update_theta(model) ;
     model.slot("mu") = update_mu(model) ;
     model.slot("tau2") = update_tau2(model) ;
@@ -844,9 +908,9 @@ Rcpp::S4 trios_mcmc(Rcpp::S4 object, Rcpp::S4 mcmcp) {
     // updates integer matrix of slot probz for all individuals
     model.slot("zfreq") = tmp ;
     zfreq(s, _) = tmp ;
-    temp = update_mendelian(model) ;
-    model.slot("is_mendelian") = temp ;
-    mendelian_ = mendelian_ + temp ;
+    //temp = update_mendelian(model) ;
+    //model.slot("is_mendelian") = temp ;
+    //mendelian_ = mendelian_ + temp ;
 
     model.slot("sigma2") = update_sigma2(model) ;
     sigma2c(s, _) = as<Rcpp::NumericVector>(model.slot("sigma2"));
@@ -893,7 +957,7 @@ Rcpp::S4 trios_mcmc(Rcpp::S4 object, Rcpp::S4 mcmcp) {
       model.slot("nu.0") = update_nu0(model) ;
       model.slot("sigma2.0") = update_sigma20(model) ;
       //model.slot("z") = update_zchild(model) ;
-      model.slot("is_mendelian") = update_mendelian(model) ;
+      //model.slot("is_mendelian") = update_mendelian(model) ;
       model.slot("zfreq") = tableZ(K, model.slot("z")) ;
       model.slot("theta") = update_theta(model) ;
       model.slot("tau2") = update_tau2(model) ;
