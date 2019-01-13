@@ -372,6 +372,55 @@ TrioBatchModel <- function(triodata=tibble(),
 #' @export
 TBM <- TrioBatchModel
 
+matsplitter<-function(M, r, c) {
+  rg <- (row(M)-1)%/%r+1
+  cg <- (col(M)-1)%/%c+1
+  rci <- (rg-1)*max(cg) + cg
+  N <- prod(dim(M))/r/c
+  cv <- unlist(lapply(1:N, function(x) M[rci==x]))
+  dim(cv)<-c(r,c,N)
+  cv
+} 
+
+labelsw_varcheck <- function(model, mp){
+  chain.length <- mp@iter
+  mat.pi <- matsplitter(model[[1]]@mcmc.chains@pi, chain.length, 1)
+  mat.pi <- mat.pi[,1,]
+  pi.mat <- apply(mat.pi,2,sd)
+  pi.check <- max(pi.mat) / min(pi.mat)
+  pi.var <- apply(model[[1]]@mcmc.chains@pi,2,sd)
+  pi.check2 <- max(pi.var) / min(pi.var)
+  
+  #mat.theta <- matsplitter(model[[1]]@mcmc.chains@theta, chain.length, 1)
+  #mat.theta <- mat.theta[,1,]
+  #theta.mat <- apply(mat.theta,2,sd)
+  #theta.check <- max(theta.mat) / min(theta.mat)
+  
+  theta.check <- !is.unsorted(model[[1]]@modes$theta)
+  modlabsw <- model[[1]]@label_switch
+  
+  if (theta.check==F | pi.check > 2.5 | pi.check2 > 2.5 | modlabsw==T){
+    model[[1]]@label_switch <- TRUE
+  } else {
+    model[[1]]@label_switch <- FALSE
+  }
+  model
+}
+
+pi_check <- function(model, mp){
+  chain.length <- mp@iter
+  mat.pi <- matsplitter(model[[1]]@mcmc.chains@pi, chain.length, 1)
+  mat.pi <- mat.pi[,1,]
+  pi.mat <- apply(mat.pi,2,sd)
+  pi.check <- max(pi.mat) / min(pi.mat)
+  pi.var <- apply(model[[1]]@mcmc.chains@pi,2,sd)
+  pi.check2 <- max(pi.var) / min(pi.var)
+  
+  pi.stats <- list(pi.check1 = pi.check,
+                   pi.check2 = pi.check2)
+  pi.stats
+}
+
 theta.fix <- function(model, values) {
   # values is in the form of a [1,K] matrix
   model@theta <- values

@@ -299,7 +299,7 @@ gibbs_batch <- function(hp, mp, dat, max_burnin=32000,
     r$mpsrf < MIN_GR &&
     !label_switch(model)
   if(meets_conditions){
-    model <- compute_marginal_lik(model)
+    #model <- compute_marginal_lik(model)
   }
   model
 }
@@ -700,7 +700,7 @@ gibbsMultiBatchPooled <- function(hp,
     !label_switch(model)
   if(meets_conditions){
     ## Commented by Rob for now
-    model <- compute_marginal_lik(model)
+    #model <- compute_marginal_lik(model)
   }
   model
 }

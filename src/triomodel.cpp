@@ -651,6 +651,45 @@ Rcpp::NumericVector jointProb_compute(NumericVector datasumm, Rcpp::S4 xmod, int
 }
 
 // [[Rcpp::export]]
+Rcpp::NumericMatrix update_densityPr(Rcpp::S4 xmod) {
+  RNGScope scope ;
+  Rcpp::S4 model(clone(xmod)) ;
+  Rcpp::S4 hypp(model.slot("hyperparams")) ;
+  int K = getK(hypp) ;
+  IntegerVector batch = model.slot("batch") ;
+  IntegerVector ub = unique_batch(batch) ;
+  NumericMatrix sigma2 = model.slot("sigma2") ;
+  NumericMatrix theta = model.slot("theta") ;
+  int B = sigma2.nrow() ;
+  NumericVector x = model.slot("data") ;
+  IntegerVector nb = model.slot("batchElements") ;
+  int N = x.size() ;
+  NumericMatrix lik(N, K) ;
+  NumericVector this_batch(N) ;
+  NumericVector tmp(N) ;
+  NumericVector rowtotal(N) ;
+  double df = getDf(hypp) ;
+  for(int k = 0; k < K; ++k){
+    NumericVector dens(N) ;
+    for(int b = 0; b < B; ++b){
+      this_batch = batch == ub[b] ;
+      double sigma = sqrt(sigma2(b, k));
+      tmp = dlocScale_t(x, df, theta(b, k), sigma) * this_batch ;
+      dens += tmp ;
+    }
+    lik(_, k) = dens ;
+ //   rowtotal += dens ;
+  }
+//  NumericMatrix P(N, K) ;
+//  for(int k=0; k<K; ++k){
+//    P(_, k) = lik(_, k)/rowtotal ;
+//  }
+  //return P ;
+  return lik;
+}
+
+
+// [[Rcpp::export]]
 Rcpp::NumericVector jointProb_compute2(NumericVector datasumm, NumericMatrix multinom_dens, Rcpp::S4 xmod, int is_mend) {
   RNGScope scope ;
   Rcpp::S4 model(clone(xmod)) ;
@@ -718,7 +757,7 @@ Rcpp::NumericMatrix jointProbs(Rcpp::S4 xmod){
   IntegerVector batch = model.slot("batch") ;
   int n = x.size() ;
   NumericMatrix pdens(n, K);
-  pdens = update_multinomialPr(xmod) ;
+  pdens = update_densityPr(xmod) ;
   
   for (int i=0; i<tnr; i++){
     NumericVector data_summ = triodat3(i,_) ;
@@ -811,7 +850,7 @@ Rcpp::S4 trios_burnin(Rcpp::S4 object, Rcpp::S4 mcmcp) {
     model.slot("sigma2") = update_sigma2(model) ;
     model.slot("nu.0") = update_nu0(model) ;
     model.slot("sigma2.0") = update_sigma20(model) ;
-    //model.slot("is_mendelian") = update_mendelian(model) ;
+    model.slot("is_mendelian") = update_mendelian(model) ;
     model.slot("theta") = update_theta(model) ;
     model.slot("mu") = update_mu(model) ;
     model.slot("tau2") = update_tau2(model) ;
@@ -893,7 +932,6 @@ Rcpp::S4 trios_mcmc(Rcpp::S4 object, Rcpp::S4 mcmcp) {
   NumericVector ystar = NumericVector(B*K);
   IntegerVector zstar = IntegerVector(B*K);
   for(int s = 0; s < (S + 1); ++s){
-    // update z for every one (independence)
     z = update_zTrios(model) ;
     model.slot("z") = z ;
     // z frequency of parents
@@ -902,15 +940,14 @@ Rcpp::S4 trios_mcmc(Rcpp::S4 object, Rcpp::S4 mcmcp) {
     zfreq_parents(s, _) = tmp ;
     // updates integer matrix of slot probz for only the parents
     //model.slot("probz_par") = update_probzpar(model) ;
-    // updates z slot only for the offspring
     model.slot("probz") = update_probz(model) ;
     tmp = tableZ(K, model.slot("z")) ;
     // updates integer matrix of slot probz for all individuals
     model.slot("zfreq") = tmp ;
     zfreq(s, _) = tmp ;
-    //temp = update_mendelian(model) ;
-    //model.slot("is_mendelian") = temp ;
-    //mendelian_ = mendelian_ + temp ;
+    temp = update_mendelian(model) ;
+    model.slot("is_mendelian") = temp ;
+    mendelian_ = mendelian_ + temp ;
 
     model.slot("sigma2") = update_sigma2(model) ;
     sigma2c(s, _) = as<Rcpp::NumericVector>(model.slot("sigma2"));
@@ -949,6 +986,7 @@ Rcpp::S4 trios_mcmc(Rcpp::S4 object, Rcpp::S4 mcmcp) {
     zstar = model.slot("zstar");
     predictive_(s, _) = ystar ;
     zstar_(s, _) = zstar ;
+    
     // Thinning
     for(int t = 0; t < T; ++t){
       model.slot("z") = update_zTrios(model) ;
@@ -957,7 +995,7 @@ Rcpp::S4 trios_mcmc(Rcpp::S4 object, Rcpp::S4 mcmcp) {
       model.slot("nu.0") = update_nu0(model) ;
       model.slot("sigma2.0") = update_sigma20(model) ;
       //model.slot("z") = update_zchild(model) ;
-      //model.slot("is_mendelian") = update_mendelian(model) ;
+      model.slot("is_mendelian") = update_mendelian(model) ;
       model.slot("zfreq") = tableZ(K, model.slot("z")) ;
       model.slot("theta") = update_theta(model) ;
       model.slot("tau2") = update_tau2(model) ;

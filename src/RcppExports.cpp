@@ -1050,6 +1050,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// update_densityPr
+Rcpp::NumericMatrix update_densityPr(Rcpp::S4 xmod);
+RcppExport SEXP _CNPBayes_update_densityPr(SEXP xmodSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::S4 >::type xmod(xmodSEXP);
+    rcpp_result_gen = Rcpp::wrap(update_densityPr(xmod));
+    return rcpp_result_gen;
+END_RCPP
+}
 // jointProb_compute2
 Rcpp::NumericVector jointProb_compute2(NumericVector datasumm, NumericMatrix multinom_dens, Rcpp::S4 xmod, int is_mend);
 RcppExport SEXP _CNPBayes_jointProb_compute2(SEXP datasummSEXP, SEXP multinom_densSEXP, SEXP xmodSEXP, SEXP is_mendSEXP) {
@@ -1238,6 +1249,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_CNPBayes_predictive_trios", (DL_FUNC) &_CNPBayes_predictive_trios, 1},
     {"_CNPBayes_vector_dnorm", (DL_FUNC) &_CNPBayes_vector_dnorm, 3},
     {"_CNPBayes_jointProb_compute", (DL_FUNC) &_CNPBayes_jointProb_compute, 3},
+    {"_CNPBayes_update_densityPr", (DL_FUNC) &_CNPBayes_update_densityPr, 1},
     {"_CNPBayes_jointProb_compute2", (DL_FUNC) &_CNPBayes_jointProb_compute2, 4},
     {"_CNPBayes_jointProbs", (DL_FUNC) &_CNPBayes_jointProbs, 1},
     {"_CNPBayes_update_cnTrios", (DL_FUNC) &_CNPBayes_update_cnTrios, 1},
