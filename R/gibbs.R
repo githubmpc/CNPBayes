@@ -286,7 +286,7 @@ gibbs_batch <- function(hp, mp, dat, max_burnin=32000,
     }
     r <- gelman_rubin(mlist, hp)
     message("     Gelman-Rubin: ", round(r$mpsrf, 2))
-    message("     eff size (median): ", round(min(neff), 1))
+    message("     eff size (median): ", round(median(neff), 1))
     message("     eff size (mean): ", round(mean(neff), 1))
     if((mean(neff) > min_effsize) && r$mpsrf < MIN_GR) break()
     burnin(mp) <- as.integer(burnin(mp) * 2)
@@ -300,6 +300,7 @@ gibbs_batch <- function(hp, mp, dat, max_burnin=32000,
     !label_switch(model)
   if(meets_conditions){
     #model <- compute_marginal_lik(model)
+    model@marginal_lik <- round(median(neff), 1)
   }
   model
 }
@@ -685,7 +686,7 @@ gibbsMultiBatchPooled <- function(hp,
     r <- tryCatch(gelman_rubin(mlist, hp), error=function(e) NULL)
     if(is.null(r)) browser()
     message("     Gelman-Rubin: ", round(r$mpsrf, 2))
-    message("     eff size (median): ", round(min(neff), 1))
+    message("     eff size (median): ", round(median(neff), 1))
     message("     eff size (mean): ", round(mean(neff), 1))
     if((mean(neff) > min_effsize) && r$mpsrf < MIN_GR) break()
     burnin(mp) <- as.integer(burnin(mp) * 2)
@@ -699,8 +700,8 @@ gibbsMultiBatchPooled <- function(hp,
     r$mpsrf < MIN_GR &&
     !label_switch(model)
   if(meets_conditions){
-    ## Commented by Rob for now
     #model <- compute_marginal_lik(model)
+    model@marginal_lik <- round(median(neff), 1)
   }
   model
 }
