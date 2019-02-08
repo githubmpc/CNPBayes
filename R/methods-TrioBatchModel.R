@@ -382,6 +382,128 @@ matsplitter<-function(M, r, c) {
   cv
 } 
 
+
+.gibbs_trios_mcmc_ms <- function(hp, mp, dat, mprob,
+                              maplabel, max_burnin=32000,
+                              batches, min_effsize=500){
+  nStarts(mp) <- 1L ## because posteriorsimulation uses nStarts in a different way
+  if(iter(mp) < 500){
+    warning("Require at least 500 Monte Carlo simulations")
+    MIN_EFF <- ceiling(iter(mp) * 0.5)
+  } else MIN_EFF <- min_effsize
+  #MIN_CHAINS <- 3
+  #MIN_GR <- 1.2
+  neff <- 0; r <- 2
+  while(burnin(mp) < max_burnin && thin(mp) < 100){
+    message("  k: ", k(hp), ", burnin: ", burnin(mp), ", thin: ", thin(mp))
+    mod.list <- replicate(10, TBM(triodata=dat,
+                                  hp=hp,
+                                  mp=mp,
+                                  mprob=mprob,
+                                  maplabel=maplabel))
+    
+    for(j in seq_along(mod.list)){
+      triobm <- mod.list[[j]]
+      iter(triobm) <- 0
+      burnin(triobm) <- 100
+      triobm <- posteriorSimulation(triobm)
+      mod.list[[j]] <- triobm
+    }
+    triobml <- sapply(mod.list, log_lik)
+    triobm <- mod.list[[ which.max(triobml) ]]
+    burnin(triobm) <- burnin(mp)
+    iter(triobm) <- iter(mp)
+    triobm <- posteriorSimulation(triobm)
+
+    if(triobm@label_switch==T){
+      burnin(mp) <- as.integer(burnin(mp) * 2)
+      mp@thin <- as.integer(thin(mp) + 2)
+      next()
+    }
+    mlist <- mcmcList(triobm)
+    neff <- tryCatch(effectiveSize(mlist), error=function(e) NULL)
+    if(is.null(neff)) neff <- 0
+    message("     eff size (median): ", round(median(neff), 1))
+    message("     eff size (mean): ", round(mean(neff), 1))
+    # place ESS in the marginal likelihood slot for now
+    triobm@marginal_lik <- round(median(neff), 1)
+    if((median(neff) > min_effsize)) break()
+    burnin(mp) <- as.integer(burnin(mp) * 2)
+    mp@thin <- as.integer(thin(mp) + 2)
+  }
+  
+  #model <- combine_batchTrios(mod.list, batches)
+  model <- triobm
+  #meets_conditions <- (median(neff) > min_effsize) &&
+  #  !label_switch(model)
+  #if(meets_conditions){
+    #model <- compute_marginal_lik(model)
+  #  model@marginal_lik <- 1
+  #}
+  model
+}
+
+
+gibbs_trios_Kms <- function(hp,
+                          mp,
+                          k_range=c(1, 4),
+                          dat,
+                          batches,
+                          maplabel,
+                          mprob,
+                          max_burnin=32000,
+                          reduce_size=TRUE,
+                          min_effsize=500){
+  K <- seq(k_range[1], k_range[2])
+  hp.list <- map(K, updateK, hp)
+  model.list <- map(hp.list,
+                    .gibbs_trios_mcmc_ms,
+                    mp=mp,
+                    dat=dat,
+                    batches=batches,
+                    maplabel=maplabel,
+                    mprob=mprob,
+                    max_burnin=max_burnin,
+                    min_effsize=min_effsize)
+  names(model.list) <- paste0("TBM", map_dbl(model.list, k))
+  ## sort by marginal likelihood
+  ##
+  ## if(reduce_size) TODO:  remove z chain, keep y in one object
+  ##
+  ix <- order(map_dbl(model.list, marginal_lik), decreasing=TRUE)
+  models <- model.list[ix]
+}
+
+gibbs_trios_ms <- function(model="TBM",
+                        dat,
+                        mp,
+                        mprob,
+                        maplabel,
+                        hp.list,
+                        batches,
+                        k_range=c(1, 4),
+                        max_burnin=32e3,
+                        top=2,
+                        df=100,
+                        min_effsize=500){
+  #model <- unique(model)
+  max_burnin <- max(max_burnin, burnin(mp)) + 1
+  if(missing(hp.list)){
+    #note this line will have to be incorporated in gibbs.R when generalised
+    hp.list <- hpList(df=df)[["TBM"]]
+  }
+  message("Fitting TBM models")
+  tbm <- gibbs_trios_Kms(hp.list,
+                       k_range=k_range,
+                       mp=mp,
+                       dat=dat,
+                       batches=rep(1L, length(dat)),
+                       maplabel=maplabel,
+                       mprob=mprob,
+                       max_burnin=max_burnin,
+                       min_effsize=min_effsize)
+}
+
 labelsw_varcheck <- function(model, mp){
   chain.length <- mp@iter
   mat.pi <- matsplitter(model[[1]]@mcmc.chains@pi, chain.length, 1)
